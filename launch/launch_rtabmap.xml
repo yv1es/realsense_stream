@@ -35,7 +35,9 @@
           <param name="RGBD/AngularUpdate"        type="string" value="0.01"/>
           <param name="RGBD/LinearUpdate"         type="string" value="0.01"/>
           <param name="RGBD/OptimizeFromGraphEnd" type="string" value="false"/>
-          <param name="Odom/Strategy"            type="int" value="1"/>
+          <param name="Odom/Strategy"             type="int" value="1"/>
+          <param name="Odom/ResetCountdown=1"     type="int" value="1"/>
+          
     </node>
 
     <!-- Launch RTAB-Map visualization -->
