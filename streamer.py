@@ -35,9 +35,14 @@ def setup_realsense():
         exit(0)
 
     config.enable_stream(rs.stream.depth, FRAME_WIDTH, FRAME_HEIGHT,  rs.format.z16, FPS)
-    config.enable_stream(rs.stream.color, FRAME_WIDTH, FRAME_HEIGHT, rs.format.bgr8, FPS)
+    config.enable_stream(rs.stream.color, FRAME_WIDTH, FRAME_HEIGHT, rs.format.rgb8, FPS)
 
-    profile = pipeline.start(config)
+    cfg = pipeline.start(config)
+    profile = cfg.get_stream(rs.stream.color)  # Fetch stream profile for depth stream
+    intr = profile.as_video_stream_profile().get_intrinsics()
+    print(intr)
+    print(f"fx: {intr.fx} fy: {intr.fy} ppx: {intr.ppx} ppy: {intr.ppy}")
+    
     return pipeline
  
 def encode(color_image, depth_image):
@@ -89,7 +94,7 @@ def main():
     except ConnectionAbortedError as _:
         print("Publisher closed connection")
     finally:
-        print("Stopping catpure")
+        print("Stopping capture")
         socket.close()
         pipeline.stop()
         print("Exiting")
