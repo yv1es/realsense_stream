@@ -48,6 +48,7 @@ def encode(color_image, depth_image):
     depth_bytes_np = np.frombuffer(depth_bytes, dtype=np.uint8)
 
     rgbd_bytes_np = np.concatenate([color_bytes_np, depth_bytes_np], dtype=np.uint8)
+    return rgbd_bytes_np
 
 
 def main():
@@ -83,13 +84,15 @@ def main():
             
             # send numpy array 
             socket.sendall(rgbd_bytes_np)
-    except:
-        pass
+    except ConnectionResetError as _:
+        print("Publisher closed connection")
+    except ConnectionAbortedError as _:
+        print("Publisher closed connection")
     finally:
+        print("Stopping catpure")
         socket.close()
         pipeline.stop()
-        print("Disconnected")
-
+        print("Exiting")
 
 if __name__=='__main__':
     main()
