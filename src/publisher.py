@@ -1,170 +1,115 @@
 #!/usr/bin/env python3
-# Software License Agreement (BSD License)
-#
-# Copyright (c) 2008, Willow Garage, Inc.
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions
-# are met:
-#
-#  * Redistributions of source code must retain the above copyright
-#    notice, this list of conditions and the following disclaimer.
-#  * Redistributions in binary form must reproduce the above
-#    copyright notice, this list of conditions and the following
-#    disclaimer in the documentation and/or other materials provided
-#    with the distribution.
-#  * Neither the name of Willow Garage, Inc. nor the names of its
-#    contributors may be used to endorse or promote products derived
-#    from this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
-# Revision $Id$
-
-## Simple talker demo that published std_msgs/Strings messages
-## to the 'chatter' topic
 
 import rospy
-from std_msgs.msg import String
+import socket
+import numpy as np 
+from numpysocket import NumpySocket
+from cv_bridge import CvBridge
 
+# import ROS messages 
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from std_msgs.msg import Header
 
-import socket
-from numpysocket import NumpySocket
-import numpy as np 
-from numpy_ros import to_numpy, to_message
-
-import cv2
-from cv_bridge import CvBridge
-
-
+# Constants
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 FPS = 30
-
 HOST = socket.gethostname() 
 PORT = 5000 
 
-
-def setup_sockets():
-    socket_c = NumpySocket()  
-    socket_c.bind((HOST, PORT)) 
-    socket_c.listen()
-
-    return socket_c
+def setupSocket():
+    socket = NumpySocket()  
+    socket.bind((HOST, PORT)) 
+    socket.listen()
+    return socket
 
 
-def makeCamearInfo():
-
-    # Define camera parameters
-    camera_matrix = [618.9998779296875, 0.0, 320.2127685546875,
-                    0.0, 618.9998779296875, 239.30780029296875,
-                    0.0, 0.0, 1.0]
-    distortion_coefficients = [0.0, 0.0, 0.0, 0.0, 0.0]
-    width = 640
-    height = 480
-
-    # Create CameraInfo message
+def setupCameraInfo():
+    # information on parameters. http://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/CameraInfo.html
     camera_info = CameraInfo()
-    camera_info.header.frame_id = "camera_frame"
     camera_info.width = FRAME_WIDTH
     camera_info.height = FRAME_HEIGHT
     camera_info.distortion_model = "plumb_bob"
-    camera_info.D = distortion_coefficients
-    camera_info.K = camera_matrix
-    camera_info.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-    camera_info.P = [618.9998779296875, 0.0, 320.2127685546875, 0.0,
-                    0.0, 618.9998779296875, 239.30780029296875, 0.0,
-                    0.0, 0.0, 1.0, 0.0]
 
+    camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+    camera_info.K = [618.9998779296875,   0.0,             320.2127685546875,
+                       0.0,             618.9998779296875, 239.30780029296875,
+                       0.0,               0.0,               1.0] 
+    
+    camera_info.R = [1.0, 0.0, 0.0, 
+                     0.0, 1.0, 0.0, 
+                     0.0, 0.0, 1.0]
+
+    camera_info.P = [618.9998779296875,   0.0,             320.2127685546875,   0.0,
+                       0.0,             618.9998779296875, 239.30780029296875,  0.0,
+                       0.0,               0.0,               1.0,               0.0]
+    
     return camera_info
 
 
+def decode(rgbd_bytes_np):
+    color_bytes_np, depth_bytes_np = np.split(rgbd_bytes_np, [FRAME_WIDTH*FRAME_HEIGHT*3]) 
+        
+    color_bytes = color_bytes_np.tobytes()
+    depth_bytes = depth_bytes_np.tobytes()
 
-def talker():
+    color_image = np.frombuffer(color_bytes, dtype=np.uint8)
+    color_image.shape = (FRAME_HEIGHT, FRAME_WIDTH, 3)
+    depth_image = np.frombuffer(depth_bytes, dtype=np.uint16)
+    depth_image.shape = (FRAME_HEIGHT, FRAME_WIDTH)
+    return color_image, depth_image
 
+
+def main():
+    # initialize node and topics 
+    rospy.init_node('camera_node', anonymous=True)
     color_pub = rospy.Publisher('/camera/rgb/image_rect_color', Image, queue_size=10)
     depth_pub = rospy.Publisher('/camera/depth_registered/image_raw', Image, queue_size=10)
     info_pub = rospy.Publisher('/camera/rgb/camera_info', CameraInfo, queue_size=10)
 
-
-    rospy.init_node('camera_node', anonymous=True)
-
-    camera_info = makeCamearInfo()
-
-    rospy.loginfo("Waiting for connection")
-    socket = setup_sockets()
-    conn, address = socket.accept()
-
+    # create camera_info and CvBridge
+    camera_info = setupCameraInfo()
     bridge = CvBridge()
 
+    rospy.loginfo("Waiting for streamer connection")
+    socket = setupSocket()
+    conn, address = socket.accept()
+    rospy.loginfo("Streamer connected")
 
-
+    # publisher loop 
     while not rospy.is_shutdown():
-
+        # recieve frames
         rgbd_bytes_np = conn.recv()
-        
+        # quit when null 
         if np.size(rgbd_bytes_np) == 0:
             break
-
+        # decode into color and depth images
+        color_image, depth_image = decode(rgbd_bytes_np)
         
-        color_bytes_np, depth_bytes_np = np.split(rgbd_bytes_np, [FRAME_WIDTH*FRAME_HEIGHT*3]) 
-        
-        color_bytes = color_bytes_np.tobytes()
-        depth_bytes = depth_bytes_np.tobytes()
-
-        color_image = np.frombuffer(color_bytes, dtype=np.uint8)
-        color_image.shape = (FRAME_HEIGHT, FRAME_WIDTH, 3)
-        depth_image = np.frombuffer(depth_bytes, dtype=np.uint16)
-        depth_image.shape = (FRAME_HEIGHT, FRAME_WIDTH)
-        
-        # do whatever with color and depth
-        rospy.loginfo("Got images")
-
-        
+        # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
         depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
         
-        # color_ros.is_bigendian = True
-        # depth_ros.is_bigendian = True
-
+        # set headers 
         current_time = rospy.get_time()
         header = Header(stamp=rospy.Time.from_sec(current_time), frame_id="camera_link")
-
         color_ros.header = header
         depth_ros.header = header
         camera_info.header = header
 
-
+        # publish 
         color_pub.publish(color_ros)
         depth_pub.publish(depth_ros)
         info_pub.publish(camera_info)
         
-        # rate.sleep()
-
     conn.close() 
-    rospy.loginfo("Disconnected")
-
-
-
+    rospy.loginfo("Streamer disconnected")
 
 
 if __name__ == '__main__':
     try:
-        talker()
+        main()
     except rospy.ROSInterruptException:
         pass
