@@ -50,9 +50,9 @@
 
 
     <!-- Launch RTAB-Map visualization -->
-    <node name="rtabmapviz" pkg="rtabmap_ros" type="rtabmapviz" output="screen"/>
-    <param name="subscribe_rgbd"  type="bool" value="true"/>
-
+    <node name="rtabmapviz" pkg="rtabmap_ros" type="rtabmapviz" output="screen">
+      <param name="subscribe_rgbd"  type="bool" value="true"/>
+    </node>
     <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/> -->
     
   </group>
