@@ -5,7 +5,7 @@ Requires CUDA 11.7.1 and CuDNN 8
 ```
 git clone https://github.com/yv1es/realsense_stream.git
 cd realsense_stream/docker
-docker build -t ros-noetic-gpu .
+docker build -t ros-noetic-gpu-img .
 docker compose up
 ```
 
