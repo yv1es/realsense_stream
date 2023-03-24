@@ -7,7 +7,7 @@
 
     <!-- Launch plane segamentation -->
     <include file="$(find realsense_stream)/launch/launch_pcl.xml" /> 
-    <node name="camera_publisher" pkg="realsense_stream" type="publisher.py" output="screen"></node> 
+    
     
     <!-- RTABmap needs the transform from base_link to camera_link (see more: http://wiki.ros.org/rtabmap_ros/Tutorials/StereoHandHeldMapping -->
     <arg name="pi/2" value="1.5707963267948966" />
