@@ -50,8 +50,6 @@
     </node>  
     -->
     
-
-     <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/>  -->
-    
+        
   </group>
 </launch>
