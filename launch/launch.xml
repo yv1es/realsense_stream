@@ -6,7 +6,7 @@
     <node name="camera_publisher" pkg="realsense_stream" type="publisher.py" output="screen"></node> 
 
     <!-- Launch plane segamentation -->
-    <include file="$(find realsense_stream)/launch/launch_pcl.xml" /> 
+    <!-- <include file="$(find realsense_stream)/launch/launch_pcl.xml" />  -->
     
     
     <!-- RTABmap needs the transform from base_link to camera_link (see more: http://wiki.ros.org/rtabmap_ros/Tutorials/StereoHandHeldMapping -->
@@ -16,5 +16,5 @@
         args="$(arg optical_rotate)  base_link camera_link 100" /> 
 
     <!-- Launch rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/> 
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rtabmap_ros)/rviz.rviz"/>  -->
 </launch>
