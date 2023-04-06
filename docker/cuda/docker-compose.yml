@@ -1,0 +1,16 @@
+services:
+  ros-noetic-gpu:
+    image: ros-noetic-gpu-img
+    ports:
+     - 5000:5000
+    environment:
+    - DISPLAY=host.docker.internal:0.0
+    tty: true
+    command: bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
