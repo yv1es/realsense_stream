@@ -16,6 +16,9 @@
       <param name="frame_id"       type="string" value="base_link "/>     
       <param name="Odom/ResetCountdown" value="10" />
 
+      <param name="Kp/DetectorStrategy" type="int" value="0" />
+      <param name="SURF/GpuVersion" type="bool" value="true" />
+
       <remap from="rgbd_image" to="rgbd_image"/>
     </node>
 
