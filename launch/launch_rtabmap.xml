@@ -44,6 +44,10 @@
           <param name="Odom/Strategy"             type="int" value="0"/>
           <param name="Rtabmap/StartNewMapOnLoopClosure" value="false"/>
           <param name="Vis/MaxFeatures" type="string" value="600"/>
+
+          <param name="Kp/DetectorStrategy" type="int" value="0" />
+          <param name="SURF/GpuVersion" type="bool" value="true" />
+
     </node>
 
 

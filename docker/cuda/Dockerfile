@@ -154,21 +154,25 @@ RUN cd ~/rtabmap/build \
     && make -j20 \
     && sudo make install
 
+RUN pip install numpysocket cvbridge3
 
 # rtabmap_ros
-# RUN cd ~/catkin_ws \
-#     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
-#     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
+RUN cd ~/catkin_ws \
+    && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
+    && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
 
-# RUN sudo apt-get update \
-#     && sudo apt-get install -y ros-noetic-pcl-conversions \
-#     && sudo apt-get install -y ros-noetic-pcl-ros 
+RUN sudo apt-get update \
+    && sudo apt-get install -y ros-noetic-pcl-conversions \
+    && sudo apt-get install -y ros-noetic-pcl-ros 
+
+RUN cd ~/catkin_ws/src \
+    && git clone https://github.com/ros-planning/navigation_msgs.git
+
+RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs  ros-noetic-image-geometry
 
 # # install realsense stream packet
-RUN pip install numpysocket cvbridge3
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/realsense_stream.git \
     && . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
     && catkin_make -DWITH_QT=ON  -DRTABMAP_CUDA_SUPPORT=ON  -DRTABMAP_VERTIGO=ON -DWITH_CUDA=ON -j20
-
