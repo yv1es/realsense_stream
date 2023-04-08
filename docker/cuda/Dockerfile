@@ -13,8 +13,8 @@ RUN apt update \
     software-properties-common \
     python3-dev \
     python3-pip \
-    python3-testresources
-
+    python3-testresources \
+    cmake-curses-gui
 
 
 # install ROS noetic
@@ -51,6 +51,29 @@ RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 
 
+# Qt5 Qhull boost etc.
+RUN apt update \
+    && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+    build-essential g++ autotools-dev libicu-dev libbz2-dev libboost-all-dev \
+     qtbase5-dev  qtdeclarative5-dev qtquickcontrols2-5-dev \
+     libqhull-dev
+
+
+
+# Eigen
+RUN cd ~ \
+    && git clone https://gitlab.com/libeigen/eigen.git \
+    && cd ~/eigen \
+    && git checkout 3.4.0 \
+    && mkdir build \
+    && cd build \
+    && cmake -D CMAKE_BUILD_TYPE=RELEASE .. 
+
+RUN cd ~/eigen/build \
+    && make -j20 \
+    && make install 
+
+
 
 
 # RUN . /opt/ros/noetic/setup.sh \ 
@@ -61,6 +84,9 @@ RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 
 # RUN cd /usr/include/eigen3 && sudo cp Eigen -r /usr/include \
 #     && sudo apt-get install -y libeigen3-dev libsuitesparse-dev
+
+
+
 
 
 # opencv gpu
@@ -80,14 +106,13 @@ RUN sudo apt-get update \
 
 RUN sudo apt-get install -y libgtk-3-dev
 
-
 RUN sudo apt-get install -y libtbb-dev
 RUN sudo apt-get install -y libatlas-base-dev gfortran unzip
 
 RUN sudo apt-get update \
     && sudo apt-get install -y libprotobuf-dev protobuf-compiler \
     && sudo apt-get install -y libgoogle-glog-dev libgflags-dev \
-    && sudo apt-get install -y libgphoto2-dev libeigen3-dev libhdf5-dev doxygen
+    && sudo apt-get install -y libgphoto2-dev libhdf5-dev doxygen
 
 RUN cd ~ \
     && wget -O opencv.zip https://github.com/opencv/opencv/archive/refs/tags/4.5.2.zip \
@@ -110,7 +135,7 @@ RUN cd ~/opencv-4.5.2 \
         -D OPENCV_DNN_CUDA=ON \
         -D CUDA_ARCH_BIN=8.6 \
         -D WITH_V4L=ON \
-        -D WITH_QT=OFF \
+        -D WITH_QT=ON \
         -D WITH_OPENGL=ON \
         -D WITH_GSTREAMER=ON \
         -D OPENCV_GENERATE_PKGCONFIG=ON \
@@ -125,25 +150,78 @@ RUN cd ~/opencv-4.5.2/build \
     && make install
 
 
+RUN sudo apt install libqt5opengl5-dev
+
+
+# VTK 
+RUN cd ~ \
+    && git clone https://github.com/Kitware/VTK.git 
+
+RUN cd ~/VTK \
+    && git checkout v9.2.6 \
+    && mkdir build \
+    && cd build \
+    && cmake -D VTK_USE_CUDA=ON \
+             -D VTK_GROUP_ENABLE_Qt=YES \
+             -D VTK_MODULE_ENABLE_VTK_GUISupportQtQuick=DONT_WANT \
+             -D CMAKE_BUILD_TYPE=RELEASE .. 
+
+RUN cd ~/VTK/build \
+    && make -j20 \
+    && make install 
+
+
+
+
+
+# PCL
+RUN sudo apt install -y libusb-1.0-0-dev libflann-dev
+
+RUN cd ~ \
+    && git clone https://github.com/PointCloudLibrary/pcl.git 
+
+RUN cd ~/pcl \
+    && git checkout pcl-1.13.0 \
+    && mkdir build \
+    && cd build \
+    && cmake -D BUILD_GPU=ON \
+        -D BUILD_CUDA=ON \
+        -D CMAKE_BUILD_TYPE=RELEASE .. 
+
+RUN cd ~/pcl/build \
+    && make -j10 \
+    && make install 
 
 
 
 #  GTSAM 
-RUN sudo add-apt-repository ppa:borglab/gtsam-release-4.0 \
-    && apt update \
-    && apt install -y libgtsam-dev libgtsam-unstable-dev
+# RUN sudo add-apt-repository ppa:borglab/gtsam-release-4.0 \
+#     && apt update \
+#     && apt install -y libgtsam-dev libgtsam-unstable-dev
 
 
+# G2O
+RUN cd ~ \
+    && git clone https://github.com/RainerKuemmerle/g2o.git 
 
-# dependencies 
-RUN apt update \
-    && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
-    build-essential g++ autotools-dev libicu-dev libbz2-dev libboost-all-dev
+RUN cd ~/g2o \
+    && git checkout 20201223_git \
+    && mkdir build \
+    && cd build \
+    && cmake -D G2O_FAST_MATH=ON \
+             -D BUILD_WITH_MARCH_NATIVE=ON \ 
+             -D CMAKE_BUILD_TYPE=RELEASE ..
+
+RUN cd ~/g2o/build \
+    && make -j20 \
+    && make install 
+
+
 
 # Install RTABmap 
 RUN apt update \
     && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
-    libsqlite3-dev libpcl-dev libproj-dev libqt5svg5-dev ros-noetic-libg2o
+    libsqlite3-dev  libproj-dev libqt5svg5-dev
 
 
 RUN cd ~ \
@@ -154,25 +232,34 @@ RUN cd ~/rtabmap/build \
     && make -j20 \
     && sudo make install
 
-RUN pip install numpysocket cvbridge3
+
+
+RUN  cd ~/catkin_ws/src \
+    && git clone https://github.com/ros-perception/perception_pcl.git \
+    && cd ~/catkin_ws/src/perception_pcl \
+    && git checkout melodic-devel
+
 
 # rtabmap_ros
+RUN pip install numpysocket cvbridge3
+
 RUN cd ~/catkin_ws \
     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
 
-RUN sudo apt-get update \
-    && sudo apt-get install -y ros-noetic-pcl-conversions \
-    && sudo apt-get install -y ros-noetic-pcl-ros 
+# RUN sudo apt-get update \
+#     && sudo apt-get install -y ros-noetic-pcl-conversions \
+#     && sudo apt-get install -y ros-noetic-pcl-ros 
 
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/ros-planning/navigation_msgs.git
 
-RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs  ros-noetic-image-geometry
+RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs ros-noetic-pcl-msgs  ros-noetic-image-geometry ros-noetic-tf2-eigen
+
 
 # # install realsense stream packet
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/realsense_stream.git \
     && . /opt/ros/noetic/setup.sh \
     && cd ~/catkin_ws \
-    && catkin_make -DWITH_QT=ON  -DRTABMAP_CUDA_SUPPORT=ON  -DRTABMAP_VERTIGO=ON -DWITH_CUDA=ON -j20
+    && catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j10
