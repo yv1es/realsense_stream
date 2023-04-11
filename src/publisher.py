@@ -21,7 +21,7 @@ FPS = 60
 HOST = s.gethostname() 
 PORT = 5000 
 
-FPS_COUNTER = 100
+FPS_COUNTER = 50
 
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
