@@ -5,6 +5,7 @@ import socket
 import numpy as np 
 from numpysocket import NumpySocket
 from cv_bridge import CvBridge
+import cv2
 
 # import ROS messages 
 from sensor_msgs.msg import Image
@@ -60,7 +61,9 @@ def decode(rgbd_bytes_np):
     depth_bytes = depth_bytes_np.tobytes()
 
     color_image = np.frombuffer(color_bytes, dtype=np.uint8)
+    color_image = cv2.imdecode(color_image, cv2.IMREAD_COLOR)
     color_image.shape = (FRAME_HEIGHT, FRAME_WIDTH, 3)
+    
     depth_image = np.frombuffer(depth_bytes, dtype=np.uint16)
     depth_image.shape = (FRAME_HEIGHT, FRAME_WIDTH)
     return color_image, depth_image

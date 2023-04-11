@@ -2,6 +2,7 @@ import pyrealsense2 as rs
 import socket
 from numpysocket import NumpySocket
 import numpy as np 
+import cv2
 
 # Constants
 FRAME_WIDTH = 640
@@ -45,7 +46,11 @@ def setup_realsense():
     
     return pipeline
  
-def encode(color_image, depth_image):
+def encode(color_image, depth_image):   
+
+    # jpec compression 
+    _, color_image = cv2.imencode('.jpg', color_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+   
     color_bytes = color_image.tobytes()
     depth_bytes = depth_image.tobytes()
 

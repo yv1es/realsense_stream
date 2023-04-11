@@ -13,8 +13,14 @@ RUN apt update \
     software-properties-common \
     python3-dev \
     python3-pip \
-    python3-testresources \
-    cmake-curses-gui
+    python3-testresources 
+
+# Install newer version of cmake
+RUN sudo apt purge --auto-remove cmake \
+    && wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null \
+    && sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ focal main' \
+    && sudo apt update \
+    && sudo apt install -y cmake cmake-curses-gui
 
 
 # install ROS noetic
@@ -33,7 +39,6 @@ RUN apt update \
     python3-wstool \
     python3-pip \
     build-essential \
-    cmake \
     git
 
 RUN sudo rosdep init && rosdep update
@@ -55,9 +60,9 @@ RUN echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
 RUN apt update \
     && DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
     build-essential g++ autotools-dev libicu-dev libbz2-dev libboost-all-dev \
-     qtbase5-dev  qtdeclarative5-dev qtquickcontrols2-5-dev \
-     libqhull-dev
-
+     qtbase5-dev  qtdeclarative5-dev qtquickcontrols2-5-dev libqt5opengl5-dev \
+     libqhull-dev \
+     libblas-dev liblapack-dev libgmp3-dev libmpfr-dev libopenblas-dev
 
 
 # Eigen
@@ -75,16 +80,39 @@ RUN cd ~/eigen/build \
 
 
 
+# SuitSparse
+RUN cd ~ \
+    && git clone https://github.com/DrTimothyAldenDavis/SuiteSparse.git
 
-# RUN . /opt/ros/noetic/setup.sh \ 
-#     && sudo apt update \
-#     && sudo apt install -y ros-noetic-rtabmap ros-noetic-rtabmap-ros \
-#     && sudo apt remove -y ros-noetic-rtabmap ros-noetic-rtabmap-ros
+RUN cd ~/SuiteSparse \
+    && git checkout stable \
+    # fix a bug where cublas is not found  Install cuda later
+    && ln -s /usr/local/cuda-11.7/targets/x86_64-linux/include/cublas_v2.h  /usr/include/cublas_v2.h  \   
+    && ln -s /usr/local/cuda-11.7/targets/x86_64-linux/include/cublas_api.h  /usr/include/cublas_api.h  \
+    && CMAKE_OPTIONS="-DENABLE_CUDA=OFF  \
+                      -DSUITESPARSE_CUDA_ARCHITECTURES=86 \
+                      -DCUDA_INCLUDE_DIRS=/usr/local/cuda-11.7/include \
+                      -DBLA_VENDOR=OpenBLAS \
+                     " make global -j20 \
+    && make install 
 
 
-# RUN cd /usr/include/eigen3 && sudo cp Eigen -r /usr/include \
-#     && sudo apt-get install -y libeigen3-dev libsuitesparse-dev
 
+# G2O
+RUN cd ~ \
+    && git clone https://github.com/RainerKuemmerle/g2o.git 
+
+RUN cd ~/g2o \
+    && git checkout 20201223_git \
+    && mkdir build \
+    && cd build \
+    && cmake -D G2O_FAST_MATH=ON \
+             -D BUILD_WITH_MARCH_NATIVE=ON \ 
+             -D CMAKE_BUILD_TYPE=RELEASE ..
+
+RUN cd ~/g2o/build \
+    && make -j20 \
+    && make install 
 
 
 
@@ -92,7 +120,7 @@ RUN cd ~/eigen/build \
 # opencv gpu
 RUN sudo apt-get update \
     && sudo apt-get install -y libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev \
-    libopencv-dev libjpeg-dev libpng-dev libtiff-dev libatlas-base-dev gfortran libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    libjpeg-dev libpng-dev libtiff-dev libatlas-base-dev gfortran libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     libxvidcore-dev x264 libx264-dev libfaac-dev libmp3lame-dev libtheora-dev libvorbis-dev libopencore-amrnb-dev \
     libopencore-amrwb-dev 
 
@@ -150,8 +178,6 @@ RUN cd ~/opencv-4.5.2/build \
     && make install
 
 
-RUN sudo apt install libqt5opengl5-dev
-
 
 # VTK 
 RUN cd ~ \
@@ -194,27 +220,7 @@ RUN cd ~/pcl/build \
 
 
 
-#  GTSAM 
-# RUN sudo add-apt-repository ppa:borglab/gtsam-release-4.0 \
-#     && apt update \
-#     && apt install -y libgtsam-dev libgtsam-unstable-dev
 
-
-# G2O
-RUN cd ~ \
-    && git clone https://github.com/RainerKuemmerle/g2o.git 
-
-RUN cd ~/g2o \
-    && git checkout 20201223_git \
-    && mkdir build \
-    && cd build \
-    && cmake -D G2O_FAST_MATH=ON \
-             -D BUILD_WITH_MARCH_NATIVE=ON \ 
-             -D CMAKE_BUILD_TYPE=RELEASE ..
-
-RUN cd ~/g2o/build \
-    && make -j20 \
-    && make install 
 
 
 
@@ -247,17 +253,16 @@ RUN cd ~/catkin_ws \
     && git clone https://github.com/introlab/rtabmap_ros.git src/rtabmap_ros \
     && cd ~/catkin_ws/src/rtabmap_ros && git checkout 0.20.23-noetic
 
-# RUN sudo apt-get update \
-#     && sudo apt-get install -y ros-noetic-pcl-conversions \
-#     && sudo apt-get install -y ros-noetic-pcl-ros 
-
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/ros-planning/navigation_msgs.git
 
 RUN sudo apt-get install -y ros-noetic-tf2-geometry-msgs ros-noetic-pcl-msgs  ros-noetic-image-geometry ros-noetic-tf2-eigen
 
+RUN cd ~/catkin_ws \ 
+    catkin_make -DRTABMAP_GUI=ON -DCMAKE_BUILD_TYPE=RELEASE -j20
 
-# # install realsense stream packet
+
+# install realsense stream packet
 RUN cd ~/catkin_ws/src \
     && git clone https://github.com/yv1es/realsense_stream.git \
     && . /opt/ros/noetic/setup.sh \
