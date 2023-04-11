@@ -17,10 +17,11 @@ from std_msgs.msg import Header
 # Constants
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
-FPS = 30
+FPS = 60
 HOST = s.gethostname() 
 PORT = 5000 
 
+FPS_COUNTER = 100
 
 def setupSocket():
     socket = s.socket(s.AF_INET, s.SOCK_STREAM)
@@ -88,10 +89,12 @@ def main():
 
     start_time = time.time()
 
+    indx = 0 
+
     # publisher loop 
     while not rospy.is_shutdown():
         
-        elapsed_time = time.time() - start_time
+        
 
         # Receive the size of the data and then the data itself from the socket connection
         data_size = conn.recv(4)
@@ -122,13 +125,14 @@ def main():
         depth_pub.publish(depth_ros)
         info_pub.publish(camera_info)
 
-        fps = 1 / elapsed_time
+        
+        if indx % FPS_COUNTER == 0: 
+            elapsed_time = time.time() - start_time
+            fps = 1 / (elapsed_time * FPS_COUNTER)
+            rospy.loginfo(f"FPS: {fps}")
+            start_time = time.time()
 
-        # Print the FPS for each iteration
-        rospy.loginfo(f"FPS: {fps}")
-
-        # Reset the start time for the next iteration
-        start_time = time.time()
+        indx += 1
         
     conn.close() 
     rospy.loginfo("Streamer disconnected")
