@@ -13,7 +13,7 @@ HOST = s.gethostname()
 PORT = 5000 
 
 def setupSocket():
-    socket = s.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socket = s.socket(s.AF_INET, s.SOCK_STREAM)
     socket.bind((HOST, PORT)) 
     socket.listen()
     return socket
