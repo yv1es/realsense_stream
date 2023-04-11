@@ -6,6 +6,8 @@ import numpy as np
 from numpysocket import NumpySocket
 from cv_bridge import CvBridge
 import cv2
+import pickle
+import struct
 
 # import ROS messages 
 from sensor_msgs.msg import Image
@@ -53,20 +55,18 @@ def setupCameraInfo():
     
     return camera_info
 
+class Msg():
+    def __init__(self, color, depth) -> None:
+        self.color = color
+        self.depth = depth
 
-def decode(rgbd_bytes_np):
-    color_bytes_np, depth_bytes_np = np.split(rgbd_bytes_np, [FRAME_WIDTH*FRAME_HEIGHT*3]) 
-        
-    color_bytes = color_bytes_np.tobytes()
-    depth_bytes = depth_bytes_np.tobytes()
 
-    color_image = np.frombuffer(color_bytes, dtype=np.uint8)
-    color_image = cv2.imdecode(color_image, cv2.IMREAD_COLOR)
-    color_image.shape = (FRAME_HEIGHT, FRAME_WIDTH, 3)
-    
-    depth_image = np.frombuffer(depth_bytes, dtype=np.uint16)
-    depth_image.shape = (FRAME_HEIGHT, FRAME_WIDTH)
-    return color_image, depth_image
+def decode(msg_bytes):
+    msg = pickle.loads(msg_bytes)
+
+    color = cv2.imdecode(np.frombuffer(msg.color, dtype=np.uint8), cv2.IMREAD_COLOR)
+    depth = msg.depth 
+    return color, depth
 
 
 def main():
@@ -87,13 +87,18 @@ def main():
 
     # publisher loop 
     while not rospy.is_shutdown():
-        # recieve frames
-        rgbd_bytes_np = conn.recv()
-        # quit when null 
-        if np.size(rgbd_bytes_np) == 0:
-            break
-        # decode into color and depth images
-        color_image, depth_image = decode(rgbd_bytes_np)
+        # Receive the size of the data and then the data itself from the socket connection
+        data_size = conn.recv(4)
+        size = struct.unpack('!I', data_size)[0]
+        data = b''
+        while len(data) < size:
+            packet = conn.recv(size - len(data))
+            if not packet:
+                break
+            data += packet
+
+        # Convert the byte array to an OpenCV image
+        color_image, depth_image = decode(data)
         
         # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")

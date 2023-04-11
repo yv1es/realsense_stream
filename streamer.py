@@ -1,21 +1,23 @@
 import pyrealsense2 as rs
-import socket
-from numpysocket import NumpySocket
+import socket as s
 import numpy as np 
 import cv2
+import pickle
+import struct
+
 
 # Constants
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 FPS = 30
-HOST = socket.gethostname() 
+HOST = s.gethostname() 
 PORT = 5000 
 
 
 def setupSocket():
-    socket = NumpySocket() 
-    socket.connect((HOST, PORT))  
-    return socket
+    sock = s.socket(s.AF_INET, s.SOCK_STREAM)
+    sock.connect((HOST, PORT))  
+    return sock
 
 
 def setup_realsense():
@@ -46,19 +48,20 @@ def setup_realsense():
     
     return pipeline
  
-def encode(color_image, depth_image):   
 
-    # jpec compression 
-    _, color_image = cv2.imencode('.jpg', color_image, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-   
-    color_bytes = color_image.tobytes()
-    depth_bytes = depth_image.tobytes()
+class Msg():
+    def __init__(self, color, depth) -> None:
+        self.color = color
+        self.depth = depth
 
-    color_bytes_np = np.frombuffer(color_bytes, dtype=np.uint8)
-    depth_bytes_np = np.frombuffer(depth_bytes, dtype=np.uint8)
 
-    rgbd_bytes_np = np.concatenate([color_bytes_np, depth_bytes_np], dtype=np.uint8)
-    return rgbd_bytes_np
+
+def encode(color, depth):
+    # compress color 
+    _, color = cv2.imencode('.jpg', color, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+    msg = Msg(color, depth)
+    msg_bytes = pickle.dumps(msg)
+    return msg_bytes
 
 
 def main():
@@ -90,10 +93,15 @@ def main():
             # encode frames into one numpy array 
             color_image = np.asanyarray(color_frame.get_data())
             depth_image = np.asanyarray(aligned_depth_frame.get_data())
-            rgbd_bytes_np = encode(color_image, depth_image)
+            data = encode(color_image, depth_image)
             
-            # send numpy array 
-            socket.sendall(rgbd_bytes_np)
+            # Send the size of the data and then the data itself over the socket connection
+            size = len(data)
+            socket.send(struct.pack('!I', size))
+            socket.send(data)
+
+
+
     except ConnectionResetError as _:
         print("Publisher closed connection")
     except ConnectionAbortedError as _:
@@ -106,3 +114,5 @@ def main():
 
 if __name__=='__main__':
     main()
+
+
