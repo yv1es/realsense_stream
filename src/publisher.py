@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import rospy
-import socket
+import socket as s 
 import numpy as np 
-from numpysocket import NumpySocket
 from cv_bridge import CvBridge
 import cv2
 import pickle
@@ -18,11 +17,11 @@ from std_msgs.msg import Header
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
 FPS = 30
-HOST = socket.gethostname() 
+HOST = s.gethostname() 
 PORT = 5000 
 
 def setupSocket():
-    socket = NumpySocket()  
+    socket = s.socket(socket.AF_INET, socket.SOCK_STREAM)  
     socket.bind((HOST, PORT)) 
     socket.listen()
     return socket
