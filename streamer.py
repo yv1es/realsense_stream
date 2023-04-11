@@ -9,7 +9,7 @@ import struct
 # Constants
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 480
-FPS = 30
+FPS = 60
 HOST = s.gethostname() 
 PORT = 5000 
 

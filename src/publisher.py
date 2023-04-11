@@ -7,6 +7,7 @@ from cv_bridge import CvBridge
 import cv2
 import pickle
 import struct
+import time
 
 # import ROS messages 
 from sensor_msgs.msg import Image
@@ -85,8 +86,13 @@ def main():
     conn, address = socket.accept()
     rospy.loginfo("Streamer connected")
 
+    start_time = time.time()
+
     # publisher loop 
     while not rospy.is_shutdown():
+        
+        elapsed_time = time.time() - start_time
+
         # Receive the size of the data and then the data itself from the socket connection
         data_size = conn.recv(4)
         size = struct.unpack('!I', data_size)[0]
@@ -100,8 +106,6 @@ def main():
         # Convert the byte array to an OpenCV image
         color_image, depth_image = decode(data)
         
-        rospy.loginfo("frame")
-
         # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
         depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")
@@ -117,6 +121,14 @@ def main():
         color_pub.publish(color_ros)
         depth_pub.publish(depth_ros)
         info_pub.publish(camera_info)
+
+        fps = 1 / elapsed_time
+
+        # Print the FPS for each iteration
+        rospy.loginfo(f"FPS: {fps}")
+
+        # Reset the start time for the next iteration
+        start_time = time.time()
         
     conn.close() 
     rospy.loginfo("Streamer disconnected")
@@ -127,3 +139,4 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         pass
+
