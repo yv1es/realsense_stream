@@ -99,6 +99,8 @@ def main():
         # Convert the byte array to an OpenCV image
         color_image, depth_image = decode(data)
         
+        rospy.loginfo("frame")
+
         # transform to ROS Image messages
         color_ros = bridge.cv2_to_imgmsg(color_image, encoding="rgb8")
         depth_ros = bridge.cv2_to_imgmsg(depth_image, encoding="mono16")

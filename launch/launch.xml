@@ -1,6 +1,6 @@
 <launch>
     <!-- Launch rtabmap -->
-    <include file="$(find realsense_stream)/launch/launch_rtabmap.xml" /> 
+    <!-- <include file="$(find realsense_stream)/launch/launch_rtabmap.xml" />  -->
     
     <!-- Launch camera publisher -->
     <node name="camera_publisher" pkg="realsense_stream" type="publisher.py" output="screen"></node> 
