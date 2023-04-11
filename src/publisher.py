@@ -128,7 +128,7 @@ def main():
         
         if indx % FPS_COUNTER == 0: 
             elapsed_time = time.time() - start_time
-            fps = 1 / (elapsed_time * FPS_COUNTER)
+            fps = FPS_COUNTER / (elapsed_time)
             rospy.loginfo(f"FPS: {fps}")
             start_time = time.time()
 
